@@ -13,7 +13,7 @@ volumeicon nano thunar thunar-archive-plugin thunar-media-tags-plugin thunar-vol
 xfce4-clipman-plugin haskell-hinotify mpv qbittorrent firefox brave-bin papirus-icon-theme \
 alsa-lib alsa-plugins pulseaudio-alsa pulseaudio terminus-font ark htop libreoffice-still \
 discord dmenu bibata-cursor-theme arc-gtk-theme xmonad xmonad-contrib \
-neofetch ttf-ubuntu-fonto-family ttf-hack cabal-install xorg-xinit xterm --noconfirm
+neofetch ttf-ubuntu-fonto-family ttf-hack cabal-install lightdm xterm --noconfirm
 
 cabal update
 
@@ -23,5 +23,4 @@ mkdir ~/.xmonad
 cp ./xmonadrc ~/.xmonad
 cp ./xmobarrc ~/.config/xmobar/
 
-cp /etc/X11/xinit/xinitrc ~/.xinitrc
-echo "exec xmonad" >> ~/.xinitrc
+sudo systemctl enable lightdm
