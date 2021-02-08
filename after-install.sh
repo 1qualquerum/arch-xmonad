@@ -17,7 +17,7 @@ neofetch ttf-ubuntu-fonto-family ttf-hack cabal-install --noconfirm
 
 cabal update
 
-cd ~/Downloads/arch-monad
+cd ~/arch-monad
 mkdir ~/.config/xmobar
 mkdir ~/.xmonad
 cp ./xmonadrc ~/.xmonad
