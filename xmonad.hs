@@ -58,6 +58,12 @@ import XMonad.Util.EZConfig (additionalKeysP)
 import XMonad.Util.Run (safeSpawn, spawnPipe)
 import XMonad.Util.SpawnOnce
 
+   -- For polybar
+import qualified DBus as D
+import qualified DBus.Client as D
+import qualified Codec.Binary.UTF8.String as UTF8
+
+
 ------------------------------------------------------------------------
 -- VARIÁVEIS
 ------------------------------------------------------------------------
@@ -72,16 +78,16 @@ myTerminal :: String
 myTerminal = "alacritty"        -- Define o terminal padrão
 
 myBrowser :: String
-myBrowser = "firefox "          -- Define o navegador padrão
+myBrowser = "brave"          -- Define o navegador padrão
 
 myBorderWidth :: Dimension
-myBorderWidth = 2               -- Define a largura da borda das janelas
+myBorderWidth = 3               -- Define a largura da borda das janelas
 
 myNormColor :: String
-myNormColor   = "#221d36"       -- Define a Cor Normal
+myNormColor   = "#3E3339"       -- Define a Cor Normal
 
 myFocusColor :: String
-myFocusColor  = "#6959a8"       -- Define a Cor em foco
+myFocusColor  = "#90B9BF"       -- Define a Cor em foco
 
 myFocusFollowsMouse :: Bool
 myFocusFollowsMouse = False     -- Se o foco segue o mouse
@@ -98,9 +104,13 @@ myStartupHook = do
           spawnOnce "lxsession &"
           spawnOnce "nitrogen --restore &"
           spawnOnce "picom &"
+          spawnOnce "dunst"
+          spawnOnce "xfce4-clipman"
+          spawnOnce "udiskie -t"
+          spawnOnce "whatsapp-nativefier-dark"
           spawnOnce "nm-applet &"
           spawnOnce "volumeicon &"
-          spawnOnce "trayer --edge top --align right --widthtype request --padding 6 --SetDockType true --SetPartialStrut true --expand true --monitor 1 --transparent true --alpha 0 --tint 0x282c34  --height 22 &"
+          spawnOnce "trayer --margin 5 --distance 5 --distancefrom top --edge top --align right --widthtype request --padding 6 --SetDockType true --SetPartialStrut true --expand true  --alpha 255  --height 18 &"
           setWMName "LG3D"
 
 ------------------------------------------------------------------------
@@ -134,7 +144,7 @@ tall     = renamed [Replace "tall"]
            $ addTabs shrinkText myTabTheme
            $ subLayout [] (Simplest)
            $ limitWindows 12
-           $ mySpacing 4
+           $ mySpacing 2
            $ ResizableTall 1 (3/100) (1/2) []
 monocle  = renamed [Replace "monocle"]
            $ windowNavigation
@@ -150,8 +160,8 @@ grid     = renamed [Replace "grid"]
            $ windowNavigation
            $ addTabs shrinkText myTabTheme
            $ subLayout [] (Simplest)
-           $ limitWindows 12
-           $ mySpacing 4
+           $ limitWindows 4
+           $ mySpacing 2
            $ mkToggle (single MIRROR)
            $ Grid (16/10)
 tabs     = renamed [Replace "tabs"]
@@ -194,7 +204,7 @@ myLayoutHook = avoidStruts $ mouseResize $ windowArrange $ T.toggleLayouts float
 ------------------------------------------------------------------------
 
 myWorkspaces :: [String]
-myWorkspaces = [" web ", " chat ", " dev ", " call ", " sys ", " doc ", " vid ", " mus ", " rdn "]
+myWorkspaces = [" web ", " chat ", " dev ", " call ", " sys ", " doc ", " vid ", " mus ", " game "]
 
 ------------------------------------------------------------------------
 -- MANAGEHOOK
@@ -205,12 +215,14 @@ myManageHook = composeAll
      -- Usando "doShift ( myWorkspaces !! 7)"" manda o programa para o workspace 8!!
      -- É feito desta maneira, pois de outra forma seria necessário escrever o nome completo dos workspaces
      -- e os nomes seriam muito se estivermos usando workspaces clicáveis.
+     -- Use o XPROP pra obter informações sobre as janelas
      [ title =? "Mozilla Firefox"     --> doShift ( myWorkspaces !! 0 )
      , className =? "mpv"     --> doShift ( myWorkspaces !! 6 )
      , title =? "WhatsApp"    --> doShift ( myWorkspaces !! 1 )
      , className =? "discord"     --> doShift ( myWorkspaces !! 3 )
      , className =? "Gimp"    --> doShift ( myWorkspaces !! 8 )
      , className =? "Gimp"    --> doFloat
+     , className =? "Nitrogen"    --> doFloat
      , title =? "Oracle VM VirtualBox Manager"     --> doFloat
      , className =? "VirtualBox Manager" --> doShift  ( myWorkspaces !! 4 )
      , (className =? "firefox" <&&> resource =? "Dialog") --> doFloat  -- Float Firefox Dialog
@@ -229,21 +241,24 @@ myKeys home =
 
     -- Iniciar um prompt de sua escolha
         , ("M-<Space>", spawn "dmenu_run") -- Dmenu
-        -- , ("M-S-<Return>", spawn "rofi -show drun -config ~/.config/rofi/themes/grimaldi-dmenu.rasi -display-drun \"Run: \" -drun-display-format \"{name}\"") -- Rofi
+        --, ("M-<Space", spawn "rofi -show run -config ~/.config/rofi/config.rasi") -- Rofi
 
     -- Programas úteis para se ter atalhos para iniciar
-        , ("M-M1-t", spawn myTerminal)
+        , ("M-t", spawn myTerminal)
         , ("M-b", spawn myBrowser)
-        , ("M-M1-h", spawn (myTerminal ++ " -e htop"))
+        , ("M-M1-x", spawn "sh ~/.config/rofi/powermenu/powermenu.sh")
+        , ("M-S-h", spawn (myTerminal ++ " -e htop"))
         , ("M-S-s", spawn "spectacle -r")     -- tirar print de uma região da tela
+        , ("M-z", spawn "pamac-manager")
+        , ("C-S-<Esc>", spawn "ksysguard")
 
     -- Fechar (matar) janela
-        , ("M-c", kill1)     -- Mata a janela atualmente em foco
-        , ("M-S-c", killAll)   -- Mata todas as janelas do workspace atual
+        , ("M-c", kill1)     -- Mata a janela corWorkspaceAtualmente em foco
+        , ("M-S-c", killAll)   -- Mata todas as janelas do workspace corWorkspaceAtual
 
     -- Floating windows
         , ("M-f", sendMessage (T.Toggle "floats")) -- Alterna para o modo float
-        , ("M-t", withFocused $ windows . W.sink)  -- Manda janela flutuando de volta para o modo tiling
+        , ("M-S-t", withFocused $ windows . W.sink)  -- Manda janela flutuando de volta para o modo tiling
         , ("M-S-t", sinkAll)                       -- Manda todas as janelas flutuantes para o modo tiling
 
     -- Increase/decrease spacing (gaps)
@@ -254,14 +269,14 @@ myKeys home =
 
     -- Windows navigation
         , ("M-m", windows W.focusMaster)  -- Move o foco para a janela master
-        , ("M-j", windows W.focusDown)    -- Move o foco para a proxima janela
-        , ("M-k", windows W.focusUp)      -- Move o foco para a janela anterior
+        , ("M-k", windows W.focusDown)    -- Move o foco para a proxima janela
+        , ("M-j", windows W.focusUp)      -- Move o foco para a janela anterior
         , ("M-C-m", windows W.swapMaster) -- Troca a janela em foco com a master
-        , ("M-C-j", windows W.swapDown)   -- Troca a janela em foco com a próxima
-        , ("M-C-k", windows W.swapUp)     -- Troca a janela em foco com a anterior
+        , ("M-C-k", windows W.swapDown)   -- Troca a janela em foco com a próxima
+        , ("M-C-j", windows W.swapUp)     -- Troca a janela em foco com a anterior
         , ("M-<Backspace>", promote)      -- Move a janela em fofo para a master, mantendo a ordem dos outros.
         , ("M-S-<Tab>", rotSlavesDown)    -- Gira todas as janelas exceto a master e mantém o foco no lugar.
-        , ("M-C-<Tab>", rotAllDown)       -- Gira todas as janelas no plano atual
+        , ("M-C-<Tab>", rotAllDown)       -- Gira todas as janelas no plano corWorkspaceAtual
 
     -- Layouts
         , ("M-<Tab>", sendMessage NextLayout)           -- Troca para o próximo layout
@@ -280,21 +295,43 @@ myKeys home =
     -- Window resizing
         , ("M-h", sendMessage Shrink)                   -- Diminui horizontalmente a largura das janelas
         , ("M-l", sendMessage Expand)                   -- Aumenta horizontalmente a largura das janelas
-        , ("M-M1-k", sendMessage MirrorShrink)          -- Diminui verticalmente a altura das janelas
-        , ("M-M1-j", sendMessage MirrorExpand)          -- Aumenta verticalmente a altura das janelas
+        , ("M-C-l", sendMessage MirrorShrink)          -- Diminui verticalmente a altura das janelas
+        , ("M-C-h", sendMessage MirrorExpand)          -- Aumenta verticalmente a altura das janelas
 
     -- Sublayouts
     -- Atalhos usados para mandar ou tirar janelas do sublayout de abas.
-        , ("M-S-h", sendMessage $ pullGroup L)          -- esquerda
-        , ("M-S-l", sendMessage $ pullGroup R)          -- direita
-        , ("M-S-k", sendMessage $ pullGroup U)          -- cima
-        , ("M-S-j", sendMessage $ pullGroup D)          -- baixo
-        , ("M-S-m", withFocused (sendMessage . MergeAll))
-        , ("M-S-u", withFocused (sendMessage . UnMerge))
-        , ("M-S-/", withFocused (sendMessage . UnMergeAll))
-        , ("M-S-.", onGroup W.focusUp')    -- Mudar o foco para a próxima aba
-        , ("M-S-,", onGroup W.focusDown')  -- Mudar o foco para a próxima aba
+        , ("M-M1-j", sendMessage $ pullGroup L)          -- esquerda
+        , ("M-M1-k", sendMessage $ pullGroup R)          -- direita
+        , ("M-M1-h", sendMessage $ pullGroup U)          -- cima
+        , ("M-M1-l", sendMessage $ pullGroup D)          -- baixo
+        , ("M-M1-m", withFocused (sendMessage . MergeAll))
+        , ("M-M1-u", withFocused (sendMessage . UnMerge))
+        , ("M-M1-/", withFocused (sendMessage . UnMergeAll))
+        , ("M-M1-.", onGroup W.focusUp')    -- Mudar o foco para a próxima aba
+        , ("M-M1-,", onGroup W.focusDown')  -- Mudar o foco para a próxima aba
         ]
+
+
+------------------------------------------------------------------------
+-- XMOBAR WORKSPACES COLORS
+------------------------------------------------------------------------
+corWorkspaceAtual :: String
+corWorkspaceAtual = "#90B9BF"
+
+corComJanela :: String
+corComJanela = "#9388bd"
+
+corSemJanela :: String
+corSemJanela = "#b3afc2"
+
+corXwindow :: String
+corXwindow = "#b3afc2"
+
+corUrgente :: String
+corUrgente = "#C45500"
+
+corLayout :: String
+corLayout = "#90B9BF"
 
 ------------------------------------------------------------------------
 -- MAIN
@@ -324,14 +361,14 @@ main = do
         , normalBorderColor  = myNormColor
         , focusedBorderColor = myFocusColor
         , logHook = workspaceHistoryHook <+> myLogHook <+> dynamicLogWithPP xmobarPP
-                        { ppCurrent = xmobarColor "#98be65" "" . wrap "[" "]" -- Current workspace in xmobar
-                        , ppVisible = xmobarColor "#98be65" ""                -- Visible but not current workspace
-                        , ppHidden = xmobarColor "#82AAFF" "" . wrap "*" ""   -- Hidden workspaces in xmobar
-                        , ppHiddenNoWindows = xmobarColor "#c792ea" ""        -- Hidden workspaces (no windows)
-                        , ppTitle = xmobarColor "#b3afc2" "" . shorten 60     -- Title of active window in xmobar
-                        , ppSep =  "<fc=#666666> <fn=1>|</fn> </fc>"          -- Separators in xmobar
-                        , ppUrgent = xmobarColor "#C45500" "" . wrap "!" "!"  -- Urgent workspace
-                        , ppExtras  = [windowCount]                           -- # of windows current workspace
-                        , ppOrder  = \(ws:l:t:ex) -> [ws,l]++ex++[t]
+                        { ppOutput = \x -> hPutStrLn xmproc x
+                        , ppCurrent = xmobarColor corWorkspaceAtual "" . wrap "[" "]" -- Current workspace in xmobar
+                        , ppVisible = xmobarColor corWorkspaceAtual ""                -- Visible but not current workspace
+                        , ppHidden = xmobarColor corComJanela "" . wrap "*" ""        -- Hidden workspaces in xmobar
+                        , ppLayout = xmobarColor corLayout ""
+                        , ppHiddenNoWindows = xmobarColor corSemJanela ""             -- Hidden workspaces (no windows)           -- Title of active window in xmobar                              -- Separators in xmobar
+                        , ppUrgent = xmobarColor corUrgente "" . wrap "!" "!"         -- Urgent workspace
+                        , ppExtras = [windowCount]                                   -- # of windows current workspace
+                        , ppOrder  = \(ws:l:t:ex) -> [ws,l]
                         }
         } `additionalKeysP` myKeys home
